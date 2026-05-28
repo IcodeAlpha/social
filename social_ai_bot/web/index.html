@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialBot.ai — AI Post Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #00cc33;
+    --green-muted: rgba(0,255,65,0.15);
+    --green-border: rgba(0,255,65,0.3);
+    --bg: #000000;
+    --bg-panel: #0a0a0a;
+    --bg-card: #0d0d0d;
+    --text: #e0e0e0;
+    --text-dim: #666;
+    --font: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline effect */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,65,0.015) 2px,
+      rgba(0,255,65,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* Matrix rain canvas */
+  #matrix-bg {
+    position: fixed;
+    inset: 0;
+    opacity: 0.04;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* Header */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--green-border);
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--green);
+    font-size: 16px;
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,65,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(0,255,65,0); }
+  }
+
+  .logo-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .logo-text span { color: var(--green); }
+
+  .header-status {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: blink 1.5s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Terminal prompt */
+  .terminal-prompt {
+    background: var(--bg-panel);
+    border: 1px solid var(--green-border);
+    padding: 28px 32px;
+    margin-bottom: 32px;
+    position: relative;
+  }
+
+  .terminal-prompt::before {
+    content: '// GENERATE POST';
+    position: absolute;
+    top: -1px;
+    left: 20px;
+    background: var(--bg);
+    color: var(--green);
+    font-size: 10px;
+    padding: 0 8px;
+    letter-spacing: 2px;
+  }
+
+  .prompt-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .prompt-symbol {
+    color: var(--green);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .topic-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    caret-color: var(--green);
+  }
+
+  .topic-input::placeholder { color: var(--text-dim); }
+
+  .input-underline {
+    height: 1px;
+    background: var(--green-border);
+    margin-bottom: 24px;
+    transition: background 0.2s;
+  }
+
+  .topic-input:focus ~ .input-underline,
+  .prompt-line:focus-within + .input-underline {
+    background: var(--green);
+  }
+
+  /* Options row */
+  .options-row {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .option-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .checkboxes {
+    display: flex;
+    gap: 16px;
+  }
+
+  .cb-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .cb-label:hover { color: var(--green); }
+
+  .cb-label input[type="checkbox"] {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--text-dim);
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+  }
+
+  .cb-label input[type="checkbox"]:checked {
+    border-color: var(--green);
+    background: var(--green-muted);
+  }
+
+  .cb-label input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: -2px;
+    left: 1px;
+    color: var(--green);
+    font-size: 11px;
+  }
+
+  .voice-select {
+    background: transparent;
+    border: 1px solid var(--green-border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 6px 12px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .voice-select option { background: #0a0a0a; }
+
+  /* Generate button */
+  .generate-btn {
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 10px 28px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .generate-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--green);
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    z-index: -1;
+  }
+
+  .generate-btn:hover {
+    color: #000;
+    background: var(--green);
+  }
+
+  .generate-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Log output */
+  .log-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--green-border);
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    min-height: 60px;
+    display: none;
+    position: relative;
+  }
+
+  .log-panel::before {
+    content: '// LOG';
+    position: absolute;
+    top: -1px;
+    left: 20px;
+    background: var(--bg);
+    color: var(--text-dim);
+    font-size: 10px;
+    padding: 0 8px;
+    letter-spacing: 2px;
+  }
+
+  .log-line {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  .log-line.success { color: var(--green); }
+  .log-line.error { color: #ff4444; }
+
+  /* Results grid */
+  .results {
+    display: none;
+  }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .results-title {
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .image-section {
+    margin-bottom: 32px;
+    border: 1px solid var(--green-border);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .image-section::before {
+    content: '// GENERATED IMAGE';
+    position: absolute;
+    top: -1px;
+    left: 20px;
+    background: var(--bg);
+    color: var(--green);
+    font-size: 10px;
+    padding: 0 8px;
+    letter-spacing: 2px;
+    z-index: 1;
+  }
+
+  .generated-image {
+    width: 100%;
+    max-height: 420px;
+    object-fit: cover;
+    display: block;
+    filter: saturate(0.9) contrast(1.05);
+  }
+
+  .image-loading {
+    width: 100%;
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 12px;
+    gap: 12px;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--green-border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Platform cards */
+  .platforms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .platform-card {
+    background: var(--bg-card);
+    border: 1px solid var(--green-border);
+    padding: 24px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .platform-card:hover { border-color: var(--green); }
+
+  .platform-card::before {
+    content: attr(data-platform);
+    position: absolute;
+    top: -1px;
+    left: 16px;
+    background: var(--bg);
+    color: var(--green);
+    font-size: 10px;
+    padding: 0 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .caption-text {
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .hashtags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .hashtag {
+    font-size: 10px;
+    color: var(--green-dim);
+    background: var(--green-muted);
+    padding: 2px 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--green-border);
+  }
+
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--green-border);
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-size: 10px;
+    padding: 6px 14px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .copy-btn.copied {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  /* Error box */
+  .error-box {
+    background: rgba(255,68,68,0.05);
+    border: 1px solid rgba(255,68,68,0.3);
+    padding: 16px 20px;
+    color: #ff4444;
+    font-size: 12px;
+    display: none;
+    margin-bottom: 24px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix-bg"></canvas>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⬡</div>
+      <div class="logo-text"><span>social</span>bot.ai — <span>β</span></div>
+    </div>
+    <div class="header-status">
+      <div class="status-dot"></div>
+      GEMINI 2.0 + POLLINATIONS
+    </div>
+  </header>
+
+  <!-- Input Panel -->
+  <div class="terminal-prompt">
+    <div class="prompt-line">
+      <span class="prompt-symbol">❯</span>
+      <input type="text" class="topic-input" id="topicInput"
+        placeholder="enter topic or campaign idea..." autocomplete="off" />
+    </div>
+    <div class="input-underline"></div>
+
+    <div class="options-row">
+      <div class="option-group">
+        <div class="option-label">Platforms</div>
+        <div class="checkboxes">
+          <label class="cb-label">
+            <input type="checkbox" value="instagram" checked> Instagram
+          </label>
+          <label class="cb-label">
+            <input type="checkbox" value="twitter" checked> Twitter/X
+          </label>
+          <label class="cb-label">
+            <input type="checkbox" value="linkedin" checked> LinkedIn
+          </label>
+        </div>
+      </div>
+
+      <div class="option-group">
+        <div class="option-label">Brand Voice</div>
+        <select class="voice-select" id="voiceSelect">
+          <option value="professional yet approachable">Professional</option>
+          <option value="bold and energetic">Bold & Energetic</option>
+          <option value="educational and inspiring">Educational</option>
+          <option value="casual and friendly">Casual</option>
+          <option value="thought-leadership, visionary">Visionary</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="generate-btn" id="generateBtn" onclick="generate()">
+      ▶ RUN GENERATOR
+    </button>
+  </div>
+
+  <!-- Log Panel -->
+  <div class="log-panel" id="logPanel">
+    <div id="logOutput"></div>
+  </div>
+
+  <!-- Error Box -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="results-header">
+      <div class="results-title">// OUTPUT</div>
+    </div>
+
+    <!-- Image -->
+    <div class="image-section">
+      <div class="image-loading" id="imageLoading">
+        <div class="spinner"></div>
+        generating image via pollinations.ai...
+      </div>
+      <img id="generatedImage" class="generated-image" style="display:none" />
+    </div>
+
+    <!-- Platform Cards -->
+    <div class="platforms-grid" id="platformsGrid"></div>
+  </div>
+</div>
+
+<script>
+// Matrix rain background
+(function() {
+  const canvas = document.getElementById('matrix-bg');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const cols = Math.floor(canvas.width / 20);
+  const drops = Array(cols).fill(1);
+  const chars = 'アイウエオカキクケコ01アBCDEF'.split('');
+
+  function draw() {
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00ff41';
+    ctx.font = '14px JetBrains Mono';
+    drops.forEach((y, i) => {
+      const char = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(char, i * 20, y * 20);
+      if (y * 20 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    });
+  }
+  setInterval(draw, 80);
+})();
+
+function log(msg, type = '') {
+  const panel = document.getElementById('logPanel');
+  const output = document.getElementById('logOutput');
+  panel.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+  line.textContent = `[${ts}] ${msg}`;
+  output.appendChild(line);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('logOutput').innerHTML = '';
+  document.getElementById('logPanel').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+}
+
+function getSelectedPlatforms() {
+  return [...document.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(cb => cb.value);
+}
+
+async function generate() {
+  const topic = document.getElementById('topicInput').value.trim();
+  if (!topic) {
+    document.getElementById('topicInput').focus();
+    return;
+  }
+
+  const platforms = getSelectedPlatforms();
+  if (platforms.length === 0) {
+    alert('Select at least one platform.');
+    return;
+  }
+
+  clearLog();
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ GENERATING...';
+
+  log(`topic: "${topic}"`);
+  log(`platforms: ${platforms.join(', ')}`);
+  log('calling gemini 2.0 flash...');
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic,
+        platforms,
+        brand_voice: document.getElementById('voiceSelect').value,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      throw new Error(data.error || 'Server error');
+    }
+
+    log(`captions generated for ${platforms.length} platform(s)`, 'success');
+    log('requesting image from pollinations.ai...');
+
+    renderResults(data);
+    log('done.', 'success');
+
+  } catch (err) {
+    const box = document.getElementById('errorBox');
+    box.textContent = `error: ${err.message}`;
+    box.style.display = 'block';
+    log(`failed: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ RUN GENERATOR';
+  }
+}
+
+function renderResults(data) {
+  const results = document.getElementById('results');
+  results.style.display = 'block';
+
+  // Image
+  const img = document.getElementById('generatedImage');
+  const imgLoading = document.getElementById('imageLoading');
+  img.style.display = 'none';
+  imgLoading.style.display = 'flex';
+
+  img.onload = () => {
+    imgLoading.style.display = 'none';
+    img.style.display = 'block';
+    log('image loaded.', 'success');
+  };
+  img.onerror = () => {
+    imgLoading.innerHTML = '<span style="color:#ff4444">image failed to load</span>';
+  };
+  img.src = data.image_url;
+
+  // Platform cards
+  const grid = document.getElementById('platformsGrid');
+  grid.innerHTML = '';
+
+  for (const [platform, post] of Object.entries(data.posts)) {
+    const card = document.createElement('div');
+    card.className = 'platform-card';
+    card.setAttribute('data-platform', `// ${platform.toUpperCase()}`);
+
+    const tags = post.hashtags.slice(0, 8).map(t =>
+      `<span class="hashtag">${t}</span>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="caption-text">${escapeHtml(post.caption)}</div>
+      <div class="hashtags">${tags}</div>
+      <div class="card-actions">
+        <button class="copy-btn" onclick="copyCaption(this, '${platform}')">
+          COPY CAPTION
+        </button>
+        <button class="copy-btn" onclick="copyTags(this, '${platform}')">
+          COPY TAGS
+        </button>
+      </div>
+    `;
+
+    card.dataset.caption = post.caption;
+    card.dataset.hashtags = post.hashtags.join(' ');
+    grid.appendChild(card);
+  }
+
+  results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyCaption(btn, platform) {
+  const card = btn.closest('.platform-card');
+  navigator.clipboard.writeText(card.dataset.caption);
+  btn.textContent = 'COPIED ✓';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'COPY CAPTION'; btn.classList.remove('copied'); }, 2000);
+}
+
+function copyTags(btn, platform) {
+  const card = btn.closest('.platform-card');
+  navigator.clipboard.writeText(card.dataset.hashtags);
+  btn.textContent = 'COPIED ✓';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'COPY TAGS'; btn.classList.remove('copied'); }, 2000);
+}
+
+// Enter key to generate
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('topicInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') generate();
+  });
+});
+</script>
+</body>
+</html>

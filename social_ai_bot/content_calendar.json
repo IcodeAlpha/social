@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "topic": "The future of AI in healthcare",
+    "platforms": ["instagram", "twitter", "linkedin"],
+    "brand_voice": "educational and inspiring",
+    "extra_instructions": "Mention real-world impact and patient outcomes",
+    "scheduled_time": "09:00",
+    "days": ["monday", "thursday"]
+  },
+  {
+    "id": 2,
+    "topic": "5 productivity hacks for remote developers",
+    "platforms": ["instagram", "linkedin"],
+    "brand_voice": "practical and motivational",
+    "extra_instructions": "Include a tip about AI tools",
+    "scheduled_time": "11:00",
+    "days": ["tuesday"]
+  },
+  {
+    "id": 3,
+    "topic": "Why open-source AI matters for Africa",
+    "platforms": ["twitter", "linkedin"],
+    "brand_voice": "thought-leadership, forward-thinking",
+    "extra_instructions": "Reference Nairobi tech ecosystem where relevant",
+    "scheduled_time": "14:00",
+    "days": ["wednesday", "friday"]
+  },
+  {
+    "id": 4,
+    "topic": "Build in public: what I shipped this week",
+    "platforms": ["instagram", "twitter"],
+    "brand_voice": "authentic and personal",
+    "extra_instructions": "Keep it relatable to indie developers and solopreneurs",
+    "scheduled_time": "17:00",
+    "days": ["friday"]
+  }
+]

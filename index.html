@@ -7,22 +7,15 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --green: #00ff41;
-    --green-dim: #00cc33;
-    --green-muted: rgba(0,255,65,0.15);
-    --green-border: rgba(0,255,65,0.3);
-    --bg: #000000;
-    --bg-panel: #0a0a0a;
-    --bg-card: #0d0d0d;
-    --text: #e0e0e0;
-    --text-dim: #666;
-    --font: 'JetBrains Mono', monospace;
+    --green: #00ff41; --green-dim: #00cc33;
+    --green-muted: rgba(0,255,65,0.15); --green-border: rgba(0,255,65,0.3);
+    --bg: #000; --bg-panel: #0a0a0a; --bg-card: #0d0d0d;
+    --text: #e0e0e0; --text-dim: #666; --font: 'JetBrains Mono', monospace;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
   body::before {
-    content: '';
-    position: fixed; inset: 0;
+    content: ''; position: fixed; inset: 0;
     background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,65,0.015) 2px, rgba(0,255,65,0.015) 4px);
     pointer-events: none; z-index: 1000;
   }
@@ -38,60 +31,25 @@
     color: var(--green); font-size: 16px;
     animation: pulse-border 2s ease-in-out infinite;
   }
-  @keyframes pulse-border {
-    0%,100% { box-shadow: 0 0 0 0 rgba(0,255,65,0.4); }
-    50% { box-shadow: 0 0 0 6px rgba(0,255,65,0); }
-  }
+  @keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,65,0.4)} 50%{box-shadow:0 0 0 6px rgba(0,255,65,0)} }
   .logo-text { font-size: 14px; font-weight: 500; }
   .logo-text span { color: var(--green); }
   .header-status { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
   .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: blink 1.5s step-end infinite; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-  /* API Key banner */
-  .key-banner {
-    background: var(--bg-panel); border: 1px solid var(--green-border);
-    padding: 16px 24px; margin-bottom: 24px; position: relative;
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  }
-  .key-banner::before {
-    content: '// CONFIG';
-    position: absolute; top: -1px; left: 20px;
-    background: var(--bg); color: var(--text-dim);
-    font-size: 10px; padding: 0 8px; letter-spacing: 2px;
-  }
-  .key-input {
-    flex: 1; min-width: 200px;
-    background: transparent; border: 1px solid var(--green-border);
-    color: var(--text); font-family: var(--font); font-size: 12px;
-    padding: 8px 12px; outline: none;
-  }
-  .key-input::placeholder { color: var(--text-dim); }
-  .key-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-  .key-save-btn {
-    background: transparent; border: 1px solid var(--green-border);
-    color: var(--green); font-family: var(--font); font-size: 10px;
-    padding: 8px 16px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
-    transition: all 0.2s; white-space: nowrap;
-  }
-  .key-save-btn:hover { background: var(--green); color: #000; }
-
   .terminal-prompt {
     background: var(--bg-panel); border: 1px solid var(--green-border);
     padding: 28px 32px; margin-bottom: 32px; position: relative;
   }
   .terminal-prompt::before {
-    content: '// GENERATE POST';
-    position: absolute; top: -1px; left: 20px;
-    background: var(--bg); color: var(--green);
-    font-size: 10px; padding: 0 8px; letter-spacing: 2px;
+    content: '// GENERATE POST'; position: absolute; top: -1px; left: 20px;
+    background: var(--bg); color: var(--green); font-size: 10px; padding: 0 8px; letter-spacing: 2px;
   }
   .prompt-line { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
   .prompt-symbol { color: var(--green); font-size: 16px; flex-shrink: 0; }
   .topic-input {
     flex: 1; background: transparent; border: none; outline: none;
-    color: var(--text); font-family: var(--font); font-size: 15px;
-    caret-color: var(--green);
+    color: var(--text); font-family: var(--font); font-size: 15px; caret-color: var(--green);
   }
   .topic-input::placeholder { color: var(--text-dim); }
   .input-underline { height: 1px; background: var(--green-border); margin-bottom: 24px; }
@@ -102,26 +60,20 @@
   .cb-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer; transition: color 0.2s; }
   .cb-label:hover { color: var(--green); }
   .cb-label input[type="checkbox"] {
-    appearance: none; width: 14px; height: 14px;
-    border: 1px solid var(--text-dim); background: transparent;
-    cursor: pointer; position: relative; flex-shrink: 0; transition: border-color 0.2s;
+    appearance: none; width: 14px; height: 14px; border: 1px solid var(--text-dim);
+    background: transparent; cursor: pointer; position: relative; flex-shrink: 0; transition: border-color 0.2s;
   }
   .cb-label input[type="checkbox"]:checked { border-color: var(--green); background: var(--green-muted); }
-  .cb-label input[type="checkbox"]:checked::after {
-    content: '✓'; position: absolute; top: -2px; left: 1px;
-    color: var(--green); font-size: 11px;
-  }
+  .cb-label input[type="checkbox"]:checked::after { content: '✓'; position: absolute; top: -2px; left: 1px; color: var(--green); font-size: 11px; }
   .voice-select {
     background: transparent; border: 1px solid var(--green-border);
-    color: var(--text); font-family: var(--font); font-size: 12px;
-    padding: 6px 12px; outline: none; cursor: pointer;
+    color: var(--text); font-family: var(--font); font-size: 12px; padding: 6px 12px; outline: none; cursor: pointer;
   }
   .voice-select option { background: #0a0a0a; }
   .generate-btn {
-    background: transparent; border: 1px solid var(--green);
-    color: var(--green); font-family: var(--font); font-size: 13px;
-    padding: 10px 28px; cursor: pointer; letter-spacing: 2px;
-    text-transform: uppercase; transition: all 0.2s;
+    background: transparent; border: 1px solid var(--green); color: var(--green);
+    font-family: var(--font); font-size: 13px; padding: 10px 28px; cursor: pointer;
+    letter-spacing: 2px; text-transform: uppercase; transition: all 0.2s;
   }
   .generate-btn:hover { color: #000; background: var(--green); }
   .generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -131,32 +83,26 @@
   }
   .log-panel::before {
     content: '// LOG'; position: absolute; top: -1px; left: 20px;
-    background: var(--bg); color: var(--text-dim);
-    font-size: 10px; padding: 0 8px; letter-spacing: 2px;
+    background: var(--bg); color: var(--text-dim); font-size: 10px; padding: 0 8px; letter-spacing: 2px;
   }
   .log-line { font-size: 12px; color: var(--text-dim); line-height: 1.8; }
   .log-line.success { color: var(--green); }
   .log-line.error { color: #ff4444; }
   .results { display: none; }
-  .image-section {
-    margin-bottom: 32px; border: 1px solid var(--green-border);
-    overflow: hidden; position: relative;
-  }
+  .results-title { font-size: 11px; color: var(--green); letter-spacing: 3px; margin-bottom: 24px; }
+  .image-section { margin-bottom: 32px; border: 1px solid var(--green-border); overflow: hidden; position: relative; }
   .image-section::before {
     content: '// GENERATED IMAGE'; position: absolute; top: -1px; left: 20px;
-    background: var(--bg); color: var(--green);
-    font-size: 10px; padding: 0 8px; letter-spacing: 2px; z-index: 1;
+    background: var(--bg); color: var(--green); font-size: 10px; padding: 0 8px; letter-spacing: 2px; z-index: 1;
   }
   .generated-image { width: 100%; max-height: 420px; object-fit: cover; display: block; }
   .image-loading {
-    width: 100%; height: 260px;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--text-dim); font-size: 12px; gap: 12px;
+    width: 100%; height: 260px; display: flex; align-items: center;
+    justify-content: center; color: var(--text-dim); font-size: 12px; gap: 12px;
   }
   .spinner {
     width: 16px; height: 16px; border: 1px solid var(--green-border);
-    border-top-color: var(--green); border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .platforms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
@@ -167,27 +113,23 @@
   .platform-card:hover { border-color: var(--green); }
   .platform-card::before {
     content: attr(data-platform); position: absolute; top: -1px; left: 16px;
-    background: var(--bg); color: var(--green);
-    font-size: 10px; padding: 0 8px; letter-spacing: 2px; text-transform: uppercase;
+    background: var(--bg); color: var(--green); font-size: 10px; padding: 0 8px; letter-spacing: 2px; text-transform: uppercase;
   }
   .caption-text { font-size: 12px; line-height: 1.8; color: var(--text); margin-bottom: 16px; white-space: pre-wrap; word-break: break-word; }
   .hashtags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
   .hashtag { font-size: 10px; color: var(--green-dim); background: var(--green-muted); padding: 2px 8px; }
   .card-actions { display: flex; gap: 12px; padding-top: 16px; border-top: 1px solid var(--green-border); }
   .copy-btn {
-    background: transparent; border: 1px solid var(--green-border);
-    color: var(--text-dim); font-family: var(--font); font-size: 10px;
-    padding: 6px 14px; cursor: pointer; letter-spacing: 1px;
-    text-transform: uppercase; transition: all 0.2s;
+    background: transparent; border: 1px solid var(--green-border); color: var(--text-dim);
+    font-family: var(--font); font-size: 10px; padding: 6px 14px; cursor: pointer;
+    letter-spacing: 1px; text-transform: uppercase; transition: all 0.2s;
   }
   .copy-btn:hover { border-color: var(--green); color: var(--green); }
   .copy-btn.copied { border-color: var(--green); color: var(--green); }
   .error-box {
     background: rgba(255,68,68,0.05); border: 1px solid rgba(255,68,68,0.3);
-    padding: 16px 20px; color: #ff4444; font-size: 12px;
-    display: none; margin-bottom: 24px;
+    padding: 16px 20px; color: #ff4444; font-size: 12px; display: none; margin-bottom: 24px;
   }
-  .results-title { font-size: 11px; color: var(--green); letter-spacing: 3px; margin-bottom: 24px; }
 </style>
 </head>
 <body>
@@ -197,21 +139,9 @@
       <div class="logo-icon">⬡</div>
       <div class="logo-text"><span>social</span>bot.ai — <span>β</span></div>
     </div>
-    <div class="header-status">
-      <div class="status-dot"></div>
-      GEMINI 2.0 + POLLINATIONS
-    </div>
+    <div class="header-status"><div class="status-dot"></div> GEMINI 2.0 + POLLINATIONS</div>
   </header>
 
-  <!-- API Key Config -->
-  <div class="key-banner">
-    <span class="key-label">GEMINI API KEY</span>
-    <input type="password" class="key-input" id="apiKeyInput" placeholder="AIza..." />
-    <button class="key-save-btn" onclick="saveKey()">SAVE KEY</button>
-    <span style="font-size:10px;color:var(--text-dim)">stored in browser only — never sent anywhere except Google</span>
-  </div>
-
-  <!-- Input Panel -->
   <div class="terminal-prompt">
     <div class="prompt-line">
       <span class="prompt-symbol">❯</span>
@@ -257,37 +187,14 @@
 </div>
 
 <script>
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-
-function saveKey() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key) return;
-  localStorage.setItem('gemini_key', key);
-  document.querySelector('.key-save-btn').textContent = 'SAVED ✓';
-  setTimeout(() => document.querySelector('.key-save-btn').textContent = 'SAVE KEY', 2000);
-}
-
-function getKey() {
-  return document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('gemini_key') || '';
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('gemini_key');
-  if (saved) document.getElementById('apiKeyInput').value = saved;
-  document.getElementById('topicInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') generate();
-  });
-});
-
 function log(msg, type = '') {
   const panel = document.getElementById('logPanel');
-  const output = document.getElementById('logOutput');
   panel.style.display = 'block';
   const line = document.createElement('div');
   line.className = `log-line ${type}`;
   const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
   line.textContent = `[${ts}] ${msg}`;
-  output.appendChild(line);
+  document.getElementById('logOutput').appendChild(line);
 }
 
 function clearAll() {
@@ -301,45 +208,9 @@ function getSelectedPlatforms() {
   return [...document.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
 }
 
-const PLATFORM_RULES = {
-  instagram: 'Up to 2200 characters. Use emojis. End with a call-to-action. 20-30 hashtags.',
-  twitter: 'Max 280 characters total including hashtags. Be punchy. 2-3 hashtags only.',
-  linkedin: 'Professional tone. 1300 characters max. No emojis. 3-5 industry hashtags.',
-};
-
-async function callGemini(prompt, apiKey) {
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.9 }
-    })
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error?.message || 'Gemini API error');
-  }
-  const data = await res.json();
-  let raw = data.candidates[0].content.parts[0].text.trim();
-  if (raw.startsWith('```')) {
-    raw = raw.split('```')[1];
-    if (raw.startsWith('json')) raw = raw.slice(4);
-    raw = raw.split('```')[0];
-  }
-  return JSON.parse(raw.trim());
-}
-
 async function generate() {
   const topic = document.getElementById('topicInput').value.trim();
-  const apiKey = getKey();
-
   if (!topic) { document.getElementById('topicInput').focus(); return; }
-  if (!apiKey) {
-    document.getElementById('errorBox').textContent = 'error: paste your Gemini API key in the config field above.';
-    document.getElementById('errorBox').style.display = 'block';
-    return;
-  }
 
   const platforms = getSelectedPlatforms();
   if (!platforms.length) { alert('Select at least one platform.'); return; }
@@ -351,29 +222,25 @@ async function generate() {
 
   log(`topic: "${topic}"`);
   log(`platforms: ${platforms.join(', ')}`);
+  log('calling api...');
 
   try {
-    const posts = {};
-    let imagePrompt = null;
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic,
+        platforms,
+        brand_voice: document.getElementById('voiceSelect').value,
+      }),
+    });
 
-    for (const platform of platforms) {
-      log(`calling gemini for ${platform}...`);
-      const voice = document.getElementById('voiceSelect').value;
-      const prompt = `You are a world-class social media copywriter with a ${voice} brand voice.
-Topic: ${topic}
-Platform: ${platform.toUpperCase()}
-Platform rules: ${PLATFORM_RULES[platform]}
-Respond ONLY with a valid JSON object, no markdown fences:
-{"caption":"<full post caption>","hashtags":["#tag1","#tag2"],"alt_text":"<one-sentence image description>","image_prompt":"<detailed image generation prompt>"}`;
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Server error');
 
-      const result = await callGemini(prompt, apiKey);
-      posts[platform] = result;
-      log(`caption ready — ${platform}`, 'success');
-      if (!imagePrompt) imagePrompt = result.image_prompt;
-    }
-
+    log('captions generated', 'success');
     log('requesting image from pollinations.ai...');
-    renderResults(posts, imagePrompt);
+    renderResults(data);
     log('done.', 'success');
 
   } catch (err) {
@@ -386,7 +253,7 @@ Respond ONLY with a valid JSON object, no markdown fences:
   }
 }
 
-function renderResults(posts, imagePrompt) {
+function renderResults(data) {
   const results = document.getElementById('results');
   results.style.display = 'block';
 
@@ -394,16 +261,14 @@ function renderResults(posts, imagePrompt) {
   const imgLoading = document.getElementById('imageLoading');
   img.style.display = 'none';
   imgLoading.style.display = 'flex';
-
-  const encodedPrompt = encodeURIComponent(imagePrompt);
   img.onload = () => { imgLoading.style.display = 'none'; img.style.display = 'block'; log('image loaded.', 'success'); };
   img.onerror = () => { imgLoading.innerHTML = '<span style="color:#ff4444">image failed to load</span>'; };
-  img.src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=512&nologo=true`;
+  img.src = data.image_url;
 
   const grid = document.getElementById('platformsGrid');
   grid.innerHTML = '';
 
-  for (const [platform, post] of Object.entries(posts)) {
+  for (const [platform, post] of Object.entries(data.posts)) {
     const card = document.createElement('div');
     card.className = 'platform-card';
     card.setAttribute('data-platform', `// ${platform.toUpperCase()}`);
@@ -412,12 +277,11 @@ function renderResults(posts, imagePrompt) {
       <div class="caption-text">${escHtml(post.caption)}</div>
       <div class="hashtags">${tags}</div>
       <div class="card-actions">
-        <button class="copy-btn" onclick="copyText(this, \`${escAttr(post.caption)}\`)">COPY CAPTION</button>
-        <button class="copy-btn" onclick="copyText(this, \`${escAttr(post.hashtags.join(' '))}\`)">COPY TAGS</button>
+        <button class="copy-btn" onclick="copyText(this,\`${escAttr(post.caption)}\`)">COPY CAPTION</button>
+        <button class="copy-btn" onclick="copyText(this,\`${escAttr(post.hashtags.join(' '))}\`)">COPY TAGS</button>
       </div>`;
     grid.appendChild(card);
   }
-
   results.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -431,6 +295,12 @@ function copyText(btn, text) {
   btn.classList.add('copied');
   setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('topicInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') generate();
+  });
+});
 </script>
 </body>
 </html>

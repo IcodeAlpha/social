@@ -168,6 +168,14 @@
         </select>
       </div>
     </div>
+    <div class="options-row" style="margin-bottom:20px">
+      <div class="option-group">
+        <div class="option-label">Auto Post</div>
+        <label class="cb-label">
+          <input type="checkbox" id="postInstagram"> Post to Instagram after generating
+        </label>
+      </div>
+    </div>
     <button class="generate-btn" id="generateBtn" onclick="generate()">▶ RUN GENERATOR</button>
   </div>
 
@@ -225,13 +233,18 @@ async function generate() {
   log('calling api...');
 
   try {
-    const res = await fetch('/api/generate', {
+    const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000' 
+  : '';
+
+const res = await fetch(`${API_BASE}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         topic,
         platforms,
         brand_voice: document.getElementById('voiceSelect').value,
+        post_to_instagram: document.getElementById('postInstagram').checked,
       }),
     });
 
@@ -240,6 +253,14 @@ async function generate() {
 
     log('captions generated', 'success');
     log('requesting image from pollinations.ai...');
+
+    // Show Instagram post result
+    if (data.instagram?.status === 'posted') {
+      log(`✅ posted to instagram! media id: ${data.instagram.media_id}`, 'success');
+    } else if (data.instagram?.status === 'error') {
+      log(`instagram error: ${data.instagram.error}`, 'error');
+    }
+
     renderResults(data);
     log('done.', 'success');
 

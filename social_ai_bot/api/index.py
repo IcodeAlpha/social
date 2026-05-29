@@ -23,6 +23,8 @@ CORS(app)
 GEMINI_API_KEY         = os.environ.get("GEMINI_API_KEY", "")
 INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
 INSTAGRAM_ACCOUNT_ID   = os.environ.get("INSTAGRAM_ACCOUNT_ID", "")
+FACEBOOK_APP_ID        = os.environ.get("FACEBOOK_APP_ID", "")
+FACEBOOK_APP_SECRET    = os.environ.get("FACEBOOK_APP_SECRET", "")
 
 
 # ── Caption generation ────────────────────────────────────────────────────────
@@ -53,7 +55,7 @@ Respond ONLY with a valid JSON object — no markdown fences, no preamble:
 }}
 """.strip()
 
-    response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-3.1-flash-lite", contents=prompt)
     raw = response.text.strip()
 
     if raw.startswith("```"):
@@ -91,7 +93,7 @@ def post_to_instagram(image_url, caption, hashtags, access_token, account_id):
     container_id = data["id"]
 
     # Step 2 — wait for image to be ready, then publish
-    time.sleep(8)
+    time.sleep(15)
 
     pub = requests.post(f"{GRAPH}/{account_id}/media_publish", json={
         "creation_id": container_id,
@@ -109,6 +111,31 @@ def post_to_instagram(image_url, caption, hashtags, access_token, account_id):
 @app.route("/")
 def index():
     return send_from_directory("../../", "index.html")
+
+
+@app.route("/api/exchange-token")
+def exchange_token():
+    short_token = request.args.get("token")
+    if not short_token:
+        return jsonify({"error": "Pass ?token=YOUR_SHORT_TOKEN in the URL"}), 400
+    if not FACEBOOK_APP_ID or not FACEBOOK_APP_SECRET:
+        return jsonify({"error": "FACEBOOK_APP_ID or FACEBOOK_APP_SECRET not set in .env"}), 500
+
+    res = requests.get("https://graph.facebook.com/oauth/access_token", params={
+        "grant_type": "fb_exchange_token",
+        "client_id": FACEBOOK_APP_ID,
+        "client_secret": FACEBOOK_APP_SECRET,
+        "fb_exchange_token": short_token,
+    })
+    data = res.json()
+    if "error" in data:
+        return jsonify({"error": data["error"]}), 400
+
+    return jsonify({
+        "long_lived_token": data.get("access_token"),
+        "expires_in_days": round(data.get("expires_in", 0) / 86400),
+        "instructions": "Copy long_lived_token into your .env as INSTAGRAM_ACCESS_TOKEN, then restart Flask.",
+    })
 
 
 @app.route("/api/generate", methods=["POST"])
@@ -180,6 +207,7 @@ def health():
         "status": "ok",
         "gemini": bool(GEMINI_API_KEY),
         "instagram": bool(INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_ACCOUNT_ID),
+        "facebook_app": bool(FACEBOOK_APP_ID and FACEBOOK_APP_SECRET),
     })
 
 

@@ -60,7 +60,7 @@ Respond ONLY with a valid JSON object — no markdown fences, no preamble:
 
     logger.info(f"Generating caption for topic='{topic}' platform='{platform}'")
     response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model="gemini-3.1-flash-lite",
         contents=prompt,
     )
     raw = response.text.strip()

@@ -34,9 +34,9 @@ def generate_caption(
     client = genai.Client(api_key=GEMINI_API_KEY)
 
     platform_rules = {
-        "instagram": "Up to 2200 characters. Use emojis. End with a call-to-action. 20-30 hashtags.",
+        "instagram": "Up to 1500 characters. Use emojis. End with a call-to-action. 5-12 hashtags.",
         "twitter":   "Max 280 characters total including hashtags. Be punchy and engaging. 2-3 hashtags only.",
-        "linkedin":  "Professional tone. 1300 characters max. No emojis. 3-5 industry hashtags.",
+        "linkedin":  "Professional tone. 1000 characters max. No emojis. 3-5 industry hashtags.",
     }
 
     rules = platform_rules.get(platform.lower(), platform_rules["instagram"])

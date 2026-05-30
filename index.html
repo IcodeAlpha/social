@@ -175,6 +175,12 @@
           <input type="checkbox" id="postInstagram"> Post to Instagram after generating
         </label>
       </div>
+      <div class="option-group">
+        <div class="option-label">Auto Post</div>
+        <label class="cb-label">
+          <input type="checkbox" id="postTwitter"> Post to Twitter/X after generating
+        </label>
+      </div>
     </div>
     <button class="generate-btn" id="generateBtn" onclick="generate()">▶ RUN GENERATOR</button>
   </div>
@@ -213,7 +219,7 @@ function clearAll() {
 }
 
 function getSelectedPlatforms() {
-  return [...document.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+  return [...document.querySelectorAll('.checkboxes input[type="checkbox"]:checked')].map(cb => cb.value);
 }
 
 async function generate() {
@@ -245,6 +251,7 @@ const res = await fetch(`${API_BASE}/api/generate`, {
         platforms,
         brand_voice: document.getElementById('voiceSelect').value,
         post_to_instagram: document.getElementById('postInstagram').checked,
+        post_to_twitter: document.getElementById('postTwitter').checked,
       }),
     });
 
@@ -252,7 +259,7 @@ const res = await fetch(`${API_BASE}/api/generate`, {
     if (!res.ok || data.error) throw new Error(data.error || 'Server error');
 
     log('captions generated', 'success');
-    log('requesting image from pollinations.ai...');
+    log('requesting image from wizard.ai...');
 
     // Show Instagram post result
     if (data.instagram?.status === 'posted') {
@@ -260,6 +267,12 @@ const res = await fetch(`${API_BASE}/api/generate`, {
     } else if (data.instagram?.status === 'error') {
       log(`instagram error: ${data.instagram.error}`, 'error');
     }
+
+    if (data.twitter?.status === 'posted') {
+  log(`✅ posted to twitter! tweet id: ${data.twitter.tweet_id}`, 'success');
+} else if (data.twitter?.status === 'error') {
+  log(`twitter error: ${data.twitter.error}`, 'error');
+}
 
     renderResults(data);
     log('done.', 'success');

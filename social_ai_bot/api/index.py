@@ -8,6 +8,7 @@ import os
 import time
 import json
 import requests
+import tweepy
 from datetime import datetime
 from urllib.parse import quote
 from flask import Flask, request, jsonify, send_from_directory
@@ -20,11 +21,15 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-GEMINI_API_KEY         = os.environ.get("GEMINI_API_KEY", "")
-INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
-INSTAGRAM_ACCOUNT_ID   = os.environ.get("INSTAGRAM_ACCOUNT_ID", "")
-FACEBOOK_APP_ID        = os.environ.get("FACEBOOK_APP_ID", "")
-FACEBOOK_APP_SECRET    = os.environ.get("FACEBOOK_APP_SECRET", "")
+GEMINI_API_KEY              = os.environ.get("GEMINI_API_KEY", "")
+INSTAGRAM_ACCESS_TOKEN      = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
+INSTAGRAM_ACCOUNT_ID        = os.environ.get("INSTAGRAM_ACCOUNT_ID", "")
+FACEBOOK_APP_ID             = os.environ.get("FACEBOOK_APP_ID", "")
+FACEBOOK_APP_SECRET         = os.environ.get("FACEBOOK_APP_SECRET", "")
+TWITTER_API_KEY             = os.environ.get("TWITTER_API_KEY", "")
+TWITTER_API_SECRET          = os.environ.get("TWITTER_API_SECRET", "")
+TWITTER_ACCESS_TOKEN        = os.environ.get("TWITTER_ACCESS_TOKEN", "")
+TWITTER_ACCESS_TOKEN_SECRET = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET", "")
 
 
 # ── Caption generation ────────────────────────────────────────────────────────
@@ -33,9 +38,9 @@ def generate_caption(topic, platform, brand_voice="professional yet approachable
     client = genai.Client(api_key=GEMINI_API_KEY)
 
     platform_rules = {
-        "instagram": "Up to 2200 characters. Use emojis. End with a call-to-action. 20-30 hashtags.",
+        "instagram": "Up to 1500 characters. Use emojis. End with a call-to-action. 5-12 hashtags.",
         "twitter":   "Max 280 characters total including hashtags. Be punchy and engaging. 2-3 hashtags only.",
-        "linkedin":  "Professional tone. 1300 characters max. No emojis. 3-5 industry hashtags.",
+        "linkedin":  "Professional tone. 1000 characters max. No emojis. 3-5 industry hashtags.",
     }
     rules = platform_rules.get(platform, platform_rules["instagram"])
 
@@ -80,7 +85,6 @@ def post_to_instagram(image_url, caption, hashtags, access_token, account_id):
     full_caption = f"{caption}\n\n{' '.join(hashtags)}"
     GRAPH = "https://graph.facebook.com/v19.0"
 
-    # Step 1 — create media container
     res = requests.post(f"{GRAPH}/{account_id}/media", json={
         "image_url": image_url,
         "caption": full_caption,
@@ -91,8 +95,6 @@ def post_to_instagram(image_url, caption, hashtags, access_token, account_id):
         raise Exception(data.get("error", {}).get("message", "Container creation failed"))
 
     container_id = data["id"]
-
-    # Step 2 — wait for image to be ready, then publish
     time.sleep(15)
 
     pub = requests.post(f"{GRAPH}/{account_id}/media_publish", json={
@@ -104,6 +106,26 @@ def post_to_instagram(image_url, caption, hashtags, access_token, account_id):
         raise Exception(pub_data.get("error", {}).get("message", "Publish failed"))
 
     return pub_data["id"]
+
+
+# ── X (Twitter) posting ───────────────────────────────────────────────────────
+
+def post_to_twitter(caption, hashtags):
+    full_tweet = f"{caption} {' '.join(hashtags)}"
+
+    # Trim to 280 chars if needed
+    if len(full_tweet) > 280:
+        full_tweet = full_tweet[:277] + "..."
+
+    client = tweepy.Client(
+        consumer_key=TWITTER_API_KEY,
+        consumer_secret=TWITTER_API_SECRET,
+        access_token=TWITTER_ACCESS_TOKEN,
+        access_token_secret=TWITTER_ACCESS_TOKEN_SECRET,
+    )
+
+    response = client.create_tweet(text=full_tweet)
+    return response.data["id"]
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -145,6 +167,7 @@ def generate():
     platforms    = data.get("platforms", ["instagram", "twitter", "linkedin"])
     brand_voice  = data.get("brand_voice", "professional yet approachable")
     post_to_ig   = data.get("post_to_instagram", False)
+    post_to_tw   = data.get("post_to_twitter", False)
 
     if not topic:
         return jsonify({"error": "Topic is required"}), 400
@@ -168,13 +191,9 @@ def generate():
 
         # Instagram auto-post
         instagram_result = {"status": "not_requested"}
-
         if post_to_ig and "instagram" in posts:
             if not INSTAGRAM_ACCESS_TOKEN or not INSTAGRAM_ACCOUNT_ID:
-                instagram_result = {
-                    "status": "error",
-                    "error": "INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_ACCOUNT_ID not set in .env",
-                }
+                instagram_result = {"status": "error", "error": "Instagram credentials not set in .env"}
             else:
                 try:
                     media_id = post_to_instagram(
@@ -188,12 +207,28 @@ def generate():
                 except Exception as e:
                     instagram_result = {"status": "error", "error": str(e)}
 
+        # Twitter/X auto-post
+        twitter_result = {"status": "not_requested"}
+        if post_to_tw and "twitter" in posts:
+            if not all([TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET]):
+                twitter_result = {"status": "error", "error": "Twitter credentials not set in .env"}
+            else:
+                try:
+                    tweet_id = post_to_twitter(
+                        posts["twitter"]["caption"],
+                        posts["twitter"]["hashtags"],
+                    )
+                    twitter_result = {"status": "posted", "tweet_id": tweet_id}
+                except Exception as e:
+                    twitter_result = {"status": "error", "error": str(e)}
+
         return jsonify({
             "success": True,
             "topic": topic,
             "posts": posts,
             "image_url": image_url,
             "instagram": instagram_result,
+            "twitter": twitter_result,
             "timestamp": datetime.now().isoformat(),
         })
 
@@ -207,6 +242,7 @@ def health():
         "status": "ok",
         "gemini": bool(GEMINI_API_KEY),
         "instagram": bool(INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_ACCOUNT_ID),
+        "twitter": bool(TWITTER_API_KEY and TWITTER_ACCESS_TOKEN),
         "facebook_app": bool(FACEBOOK_APP_ID and FACEBOOK_APP_SECRET),
     })
 

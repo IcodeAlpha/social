@@ -34,7 +34,7 @@ def generate_caption(
     client = genai.Client(api_key=GEMINI_API_KEY)
 
     platform_rules = {
-        "instagram": "Up to 1500 characters. Use emojis. End with a call-to-action. 5-12 hashtags.",
+        "instagram": "Up to 1500 characters. Use emojis. End with a call-to-action. 20-30 hashtags.",
         "twitter":   "Max 280 characters total including hashtags. Be punchy and engaging. 2-3 hashtags only.",
         "linkedin":  "Professional tone. 1000 characters max. No emojis. 3-5 industry hashtags.",
     }
@@ -77,26 +77,28 @@ Respond ONLY with a valid JSON object — no markdown fences, no preamble:
 
 
 def generate_image(image_prompt: str, save_path=None) -> Path:
-    """
-    Generate an image using Pollinations.ai — completely free, no API key needed.
-    """
     logger.info(f"Generating image: {image_prompt[:80]}...")
-
     encoded_prompt = quote(image_prompt)
-    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true"
-
-    response = requests.get(url, timeout=60)
-    response.raise_for_status()
-
     if save_path is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         save_path = OUTPUT_DIR / f"image_{timestamp}.png"
-
-    with open(save_path, "wb") as f:
-        f.write(response.content)
-
-    logger.info(f"Image saved to {save_path}")
-    return save_path
+    urls = [
+        f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=512&height=512&model=flux",
+        f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=512&height=512",
+        "https://picsum.photos/512/512",
+    ]
+    for url in urls:
+        try:
+            r = requests.get(url, timeout=60)
+            if r.status_code == 200:
+                with open(save_path, "wb") as f:
+                    f.write(r.content)
+                logger.info(f"Image saved to {save_path}")
+                return save_path
+            logger.warning(f"Got {r.status_code} from {url}")
+        except Exception as e:
+            logger.warning(f"Failed: {e}")
+    raise RuntimeError("All image sources failed.")
 
 
 def create_post(

@@ -75,8 +75,27 @@ Respond ONLY with a valid JSON object — no markdown fences, no preamble:
 # ── Image URL ─────────────────────────────────────────────────────────────────
 
 def get_image_url(image_prompt):
+    """Get a working public image URL for the given prompt."""
     encoded = quote(image_prompt)
-    return f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&nologo=true"
+
+    # Try Pollinations variants
+    candidates = [
+        f"https://image.pollinations.ai/prompt/{encoded}?width=512&height=512&model=flux&seed=42",
+        f"https://image.pollinations.ai/prompt/{encoded}?width=512&height=512&seed=42",
+    ]
+
+    for url in candidates:
+        try:
+            res = requests.get(url, timeout=60)
+            ct = res.headers.get("content-type", "")
+            if res.status_code == 200 and "image" in ct:
+                return url
+        except Exception:
+            pass
+
+    # Reliable fallback — Picsum serves real JPEGs at stable URLs
+    seed = abs(hash(image_prompt)) % 1000
+    return f"https://picsum.photos/seed/{seed}/1024/1024"
 
 
 # ── Instagram posting ─────────────────────────────────────────────────────────
@@ -85,25 +104,41 @@ def post_to_instagram(image_url, caption, hashtags, access_token, account_id):
     full_caption = f"{caption}\n\n{' '.join(hashtags)}"
     GRAPH = "https://graph.facebook.com/v19.0"
 
+    # Step 1 — create media container
     res = requests.post(f"{GRAPH}/{account_id}/media", json={
         "image_url": image_url,
         "caption": full_caption,
         "access_token": access_token,
     })
-    data = res.json()
+
+    raw = res.text
+    try:
+        data = res.json()
+    except Exception:
+        raise Exception(f"Meta raw error: {raw[:300]}")
+
     if not res.ok or "error" in data:
-        raise Exception(data.get("error", {}).get("message", "Container creation failed"))
+        raise Exception(data.get("error", {}).get("message", f"Container failed: {raw[:200]}"))
 
     container_id = data["id"]
-    time.sleep(15)
 
+    # Step 2 — wait for container to be ready
+    time.sleep(10)
+
+    # Step 3 — publish
     pub = requests.post(f"{GRAPH}/{account_id}/media_publish", json={
         "creation_id": container_id,
         "access_token": access_token,
     })
-    pub_data = pub.json()
+
+    pub_raw = pub.text
+    try:
+        pub_data = pub.json()
+    except Exception:
+        raise Exception(f"Meta publish raw error: {pub_raw[:300]}")
+
     if not pub.ok or "error" in pub_data:
-        raise Exception(pub_data.get("error", {}).get("message", "Publish failed"))
+        raise Exception(pub_data.get("error", {}).get("message", f"Publish failed: {pub_raw[:200]}"))
 
     return pub_data["id"]
 
@@ -112,8 +147,6 @@ def post_to_instagram(image_url, caption, hashtags, access_token, account_id):
 
 def post_to_twitter(caption, hashtags):
     full_tweet = f"{caption} {' '.join(hashtags)}"
-
-    # Trim to 280 chars if needed
     if len(full_tweet) > 280:
         full_tweet = full_tweet[:277] + "..."
 
@@ -123,7 +156,6 @@ def post_to_twitter(caption, hashtags):
         access_token=TWITTER_ACCESS_TOKEN,
         access_token_secret=TWITTER_ACCESS_TOKEN_SECRET,
     )
-
     response = client.create_tweet(text=full_tweet)
     return response.data["id"]
 
@@ -163,11 +195,11 @@ def exchange_token():
 @app.route("/api/generate", methods=["POST"])
 def generate():
     data = request.get_json()
-    topic        = data.get("topic", "").strip()
-    platforms    = data.get("platforms", ["instagram", "twitter", "linkedin"])
-    brand_voice  = data.get("brand_voice", "professional yet approachable")
-    post_to_ig   = data.get("post_to_instagram", False)
-    post_to_tw   = data.get("post_to_twitter", False)
+    topic       = data.get("topic", "").strip()
+    platforms   = data.get("platforms", ["instagram", "twitter", "linkedin"])
+    brand_voice = data.get("brand_voice", "professional yet approachable")
+    post_to_ig  = data.get("post_to_instagram", False)
+    post_to_tw  = data.get("post_to_twitter", False)
 
     if not topic:
         return jsonify({"error": "Topic is required"}), 400
@@ -184,6 +216,7 @@ def generate():
             if image_prompt is None:
                 image_prompt = result["image_prompt"]
 
+        # Get image URL — waits for Pollinations to be ready
         image_url = get_image_url(image_prompt)
 
         for platform in posts:
@@ -193,7 +226,7 @@ def generate():
         instagram_result = {"status": "not_requested"}
         if post_to_ig and "instagram" in posts:
             if not INSTAGRAM_ACCESS_TOKEN or not INSTAGRAM_ACCOUNT_ID:
-                instagram_result = {"status": "error", "error": "Instagram credentials not set in .env"}
+                instagram_result = {"status": "error", "error": "Instagram credentials not set"}
             else:
                 try:
                     media_id = post_to_instagram(
@@ -207,11 +240,11 @@ def generate():
                 except Exception as e:
                     instagram_result = {"status": "error", "error": str(e)}
 
-        # Twitter/X auto-post
+        # Twitter auto-post
         twitter_result = {"status": "not_requested"}
         if post_to_tw and "twitter" in posts:
             if not all([TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET]):
-                twitter_result = {"status": "error", "error": "Twitter credentials not set in .env"}
+                twitter_result = {"status": "error", "error": "Twitter credentials not set"}
             else:
                 try:
                     tweet_id = post_to_twitter(

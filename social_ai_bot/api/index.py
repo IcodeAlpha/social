@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="../", static_url_path="")
 CORS(app)
 
 GEMINI_API_KEY              = os.environ.get("GEMINI_API_KEY", "")
@@ -30,6 +30,7 @@ TWITTER_API_KEY             = os.environ.get("TWITTER_API_KEY", "")
 TWITTER_API_SECRET          = os.environ.get("TWITTER_API_SECRET", "")
 TWITTER_ACCESS_TOKEN        = os.environ.get("TWITTER_ACCESS_TOKEN", "")
 TWITTER_ACCESS_TOKEN_SECRET = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET", "")
+LINKEDIN_ACCESS_TOKEN        = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
 
 
 # ── Caption generation ────────────────────────────────────────────────────────
@@ -60,7 +61,7 @@ Respond ONLY with a valid JSON object — no markdown fences, no preamble:
 }}
 """.strip()
 
-    response = client.models.generate_content(model="gemini-3.1-flash-lite", contents=prompt)
+    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
     raw = response.text.strip()
 
     if raw.startswith("```"):
@@ -160,11 +161,103 @@ def post_to_twitter(caption, hashtags):
     return response.data["id"]
 
 
+# ── LinkedIn posting ─────────────────────────────────────────────────────────────
+
+def get_linkedin_person_urn(access_token):
+    res = requests.get("https://api.linkedin.com/v2/userinfo", headers={
+        "Authorization": f"Bearer {access_token}"
+    })
+    data = res.json()
+    sub = data.get("sub")
+    if not sub:
+        raise Exception(f"Could not get LinkedIn person URN: {data}")
+    return f"urn:li:person:{sub}"
+
+
+def post_to_linkedin(caption, hashtags, access_token):
+    person_urn = get_linkedin_person_urn(access_token)
+    full_text = f"{caption}\n\n{' '.join(hashtags)}"[:3000]
+
+    res = requests.post(
+        "https://api.linkedin.com/v2/ugcPosts",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "X-Restli-Protocol-Version": "2.0.0",
+        },
+        json={
+            "author": person_urn,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {"text": full_text},
+                    "shareMediaCategory": "NONE",
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            },
+        },
+    )
+
+    raw = res.text
+    try:
+        data = res.json()
+    except Exception:
+        raise Exception(f"LinkedIn raw error: {raw[:300]}")
+
+    if not res.ok or "serviceErrorCode" in data:
+        raise Exception(data.get("message", f"LinkedIn post failed: {raw[:200]}"))
+
+    return data.get("id", "posted")
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route("/")
 def index():
     return send_from_directory("../../", "index.html")
+
+
+@app.route("/callback")
+def linkedin_callback():
+    code = request.args.get("code")
+    error = request.args.get("error")
+
+    if error:
+        return f"<h2>LinkedIn Error</h2><p>{error}</p>", 400
+    if not code:
+        return "<h2>No code received</h2>", 400
+
+    LINKEDIN_CLIENT_ID = os.environ.get("LINKEDIN_CLIENT_ID", "")
+    LINKEDIN_CLIENT_SECRET = os.environ.get("LINKEDIN_CLIENT_SECRET", "")
+    REDIRECT_URI = request.base_url
+
+    res = requests.post("https://www.linkedin.com/oauth/v2/accessToken", data={
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": REDIRECT_URI,
+        "client_id": LINKEDIN_CLIENT_ID,
+        "client_secret": LINKEDIN_CLIENT_SECRET,
+    }, headers={"Content-Type": "application/x-www-form-urlencoded"})
+
+    data = res.json()
+    if "access_token" in data:
+        token = data["access_token"]
+        expires = data.get("expires_in", 0)
+        days = round(expires / 86400)
+        return f"""
+        <html><body style="font-family:monospace;padding:40px;background:#000;color:#00ff41">
+        <h2>✅ LinkedIn Token Generated!</h2>
+        <p>Expires in: {days} days</p>
+        <p>Copy this token into your .env as <strong>LINKEDIN_ACCESS_TOKEN</strong>:</p>
+        <textarea style="width:100%;height:120px;background:#0a0a0a;color:#00ff41;border:1px solid #00ff41;padding:10px;font-family:monospace">{token}</textarea>
+        <br><br>
+        <p>Then add it to Vercel environment variables too.</p>
+        </body></html>
+        """
+    else:
+        return f"<h2>Error</h2><pre>{data}</pre>", 400
 
 
 @app.route("/api/exchange-token")
@@ -262,6 +355,7 @@ def generate():
             "image_url": image_url,
             "instagram": instagram_result,
             "twitter": twitter_result,
+            "linkedin": linkedin_result,
             "timestamp": datetime.now().isoformat(),
         })
 

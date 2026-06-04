@@ -1,162 +1,198 @@
 """
 scheduler.py
-Phase 3 — Full Automation Runner
-
-Reads content_calendar.json, runs the AI pipeline at scheduled times,
-and posts to all configured platforms.
-
-Usage:
-    python scheduler.py              # run continuously (production)
-    python scheduler.py --run-now 1  # immediately run calendar entry with id=1
-    python scheduler.py --dry-run    # show schedule without posting
+Runs 3x daily — posts to Instagram + LinkedIn automatically.
+Designed to run 24/7 on Railway.
 """
 
-import argparse
-import json
 import os
 import time
-from datetime import datetime
-from pathlib import Path
-
+import json
+import logging
+import requests
 import schedule
+from datetime import datetime
+from urllib.parse import quote
+from dotenv import load_dotenv
+from google import genai
 
-from post_generator import create_post
-from utils.logger import get_logger
+load_dotenv()
 
-logger = get_logger("scheduler")
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s — %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+log = logging.getLogger("scheduler")
 
-CALENDAR_FILE = Path("content_calendar.json")
+# ── Config ────────────────────────────────────────────────────────────────────
+GEMINI_API_KEY         = os.environ.get("GEMINI_API_KEY", "")
+INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
+INSTAGRAM_ACCOUNT_ID   = os.environ.get("INSTAGRAM_ACCOUNT_ID", "")
+LINKEDIN_ACCESS_TOKEN  = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
 
-# ── Platform poster registry ───────────────────────────────────────────────────
-# Import connectors lazily so missing optional deps don't crash startup
-def _get_posters():
-    posters = {}
-    try:
-        from connectors.instagram_poster import post_to_instagram, upload_image_imgur
-        posters["instagram"] = lambda img, cap, tags: post_to_instagram(
-            upload_image_imgur(img), cap, tags
-        )
-    except Exception as e:
-        logger.warning(f"Instagram connector unavailable: {e}")
+# Post times (24hr UTC — 08:00, 13:00, 18:00)
+POST_TIMES = ["08:00", "13:00", "18:00"]
 
-    try:
-        from connectors.twitter_poster import post_to_twitter
-        posters["twitter"] = post_to_twitter
-    except Exception as e:
-        logger.warning(f"Twitter connector unavailable: {e}")
+# Content calendar — rotates automatically
+TOPICS = [
+    {"topic": "How AI is transforming small businesses in Africa", "voice": "educational and inspiring"},
+    {"topic": "5 productivity hacks every developer should know", "voice": "casual and friendly"},
+    {"topic": "The future of remote work and digital nomads", "voice": "thought-leadership, visionary"},
+    {"topic": "Why mental health matters for entrepreneurs", "voice": "empathetic and professional"},
+    {"topic": "Building in public: lessons from shipping fast", "voice": "authentic and personal"},
+    {"topic": "Top AI tools that save you 10 hours a week", "voice": "bold and energetic"},
+    {"topic": "How to grow your personal brand on social media", "voice": "professional yet approachable"},
+    {"topic": "The rise of the creator economy in Africa", "voice": "educational and inspiring"},
+    {"topic": "Why every business needs an AI strategy in 2026", "voice": "thought-leadership, visionary"},
+    {"topic": "Morning routines of highly successful founders", "voice": "casual and friendly"},
+    {"topic": "How to turn your passion into a profitable product", "voice": "bold and energetic"},
+    {"topic": "The power of consistency in content creation", "voice": "professional yet approachable"},
+]
 
-    try:
-        from connectors.linkedin_poster import post_to_linkedin
-        posters["linkedin"] = post_to_linkedin
-    except Exception as e:
-        logger.warning(f"LinkedIn connector unavailable: {e}")
-
-    return posters
+topic_index = 0
 
 
-# ── Core job runner ────────────────────────────────────────────────────────────
-def run_calendar_entry(entry: dict, dry_run: bool = False):
-    logger.info(f"▶ Running entry id={entry['id']} topic='{entry['topic']}'")
+# ── Caption generation ────────────────────────────────────────────────────────
+def generate_caption(topic, platform, brand_voice):
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    platform_rules = {
+        "instagram": "Up to 1500 characters. Use emojis. End with a call-to-action. 5-12 hashtags.",
+        "linkedin":  "Professional tone. 1000 characters max. No emojis. 3-5 industry hashtags.",
+    }
+    prompt = f"""You are a world-class social media copywriter with a {brand_voice} brand voice.
+Topic: {topic}
+Platform: {platform.upper()}
+Platform rules: {platform_rules.get(platform, "")}
+Respond ONLY with a valid JSON object — no markdown fences:
+{{"caption":"<full post caption>","hashtags":["#tag1","#tag2"],"image_prompt":"<detailed image prompt>"}}""".strip()
 
-    if dry_run:
-        logger.info(f"  [DRY RUN] Would post to: {entry['platforms']}")
-        return
+    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    raw = response.text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"): raw = raw[4:]
+    return json.loads(raw.strip().rstrip("```").strip())
 
-    try:
-        posts = create_post(
-            topic=entry["topic"],
-            platforms=entry["platforms"],
-            brand_voice=entry.get("brand_voice", "professional yet approachable"),
-            extra_instructions=entry.get("extra_instructions", ""),
-        )
-    except Exception as e:
-        logger.error(f"Content generation failed: {e}")
-        return
 
-    posters = _get_posters()
-    results = {}
-
-    for platform in entry["platforms"]:
-        if platform not in posters:
-            logger.warning(f"No connector for '{platform}', skipping.")
-            continue
-
-        post_data  = posts[platform]
-        image_path = Path(post_data["image_path"])
-        caption    = post_data["caption"]
-        hashtags   = post_data["hashtags"]
-
+# ── Image ─────────────────────────────────────────────────────────────────────
+def get_image_url(image_prompt):
+    encoded = quote(image_prompt)
+    for url in [
+        f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model=flux",
+        f"https://image.pollinations.ai/prompt/{encoded}?width=512&height=512",
+    ]:
         try:
-            result = posters[platform](image_path, caption, hashtags)
-            results[platform] = {"status": "ok", "id": result}
-            logger.info(f"  ✅ {platform}: posted (id={result})")
-        except Exception as e:
-            results[platform] = {"status": "error", "error": str(e)}
-            logger.error(f"  ❌ {platform}: {e}")
-
-    # Save results
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    result_file = Path("output") / f"results_{ts}.json"
-    result_file.write_text(json.dumps({"entry": entry, "results": results}, indent=2))
-    logger.info(f"Results saved: {result_file}")
+            res = requests.get(url, timeout=60)
+            if res.status_code == 200 and "image" in res.headers.get("content-type", ""):
+                return url
+        except Exception:
+            pass
+    return f"https://picsum.photos/seed/{abs(hash(image_prompt)) % 1000}/1024/1024"
 
 
-# ── Schedule builder ───────────────────────────────────────────────────────────
-DAY_MAP = {
-    "monday":    schedule.every().monday,
-    "tuesday":   schedule.every().tuesday,
-    "wednesday": schedule.every().wednesday,
-    "thursday":  schedule.every().thursday,
-    "friday":    schedule.every().friday,
-    "saturday":  schedule.every().saturday,
-    "sunday":    schedule.every().sunday,
-}
+# ── Instagram ─────────────────────────────────────────────────────────────────
+def post_to_instagram(image_url, caption, hashtags):
+    GRAPH = "https://graph.facebook.com/v19.0"
+    res = requests.post(f"{GRAPH}/{INSTAGRAM_ACCOUNT_ID}/media", json={
+        "image_url": image_url,
+        "caption": f"{caption}\n\n{' '.join(hashtags)}",
+        "access_token": INSTAGRAM_ACCESS_TOKEN,
+    })
+    data = res.json()
+    if not res.ok or "error" in data:
+        raise Exception(data.get("error", {}).get("message", "Container failed"))
+    time.sleep(10)
+    pub = requests.post(f"{GRAPH}/{INSTAGRAM_ACCOUNT_ID}/media_publish", json={
+        "creation_id": data["id"],
+        "access_token": INSTAGRAM_ACCESS_TOKEN,
+    })
+    pub_data = pub.json()
+    if not pub.ok or "error" in pub_data:
+        raise Exception(pub_data.get("error", {}).get("message", "Publish failed"))
+    return pub_data["id"]
 
 
-def build_schedule(calendar: list[dict], dry_run: bool = False):
-    for entry in calendar:
-        time_str = entry.get("scheduled_time", "09:00")
-        days     = [d.lower() for d in entry.get("days", ["monday"])]
+# ── LinkedIn ──────────────────────────────────────────────────────────────────
+def post_to_linkedin(caption, hashtags):
+    res = requests.get("https://api.linkedin.com/v2/userinfo", headers={
+        "Authorization": f"Bearer {LINKEDIN_ACCESS_TOKEN}"
+    })
+    sub = res.json().get("sub")
+    if not sub:
+        raise Exception("Could not get LinkedIn URN")
 
-        for day in days:
-            if day not in DAY_MAP:
-                logger.warning(f"Unknown day '{day}' in entry {entry['id']}, skipping.")
-                continue
+    person_urn = f"urn:li:person:{sub}"
+    res = requests.post(
+        "https://api.linkedin.com/v2/ugcPosts",
+        headers={
+            "Authorization": f"Bearer {LINKEDIN_ACCESS_TOKEN}",
+            "Content-Type": "application/json",
+            "X-Restli-Protocol-Version": "2.0.0",
+        },
+        json={
+            "author": person_urn,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {"text": f"{caption}\n\n{' '.join(hashtags)}"[:3000]},
+                    "shareMediaCategory": "NONE",
+                }
+            },
+            "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
+        },
+    )
+    data = res.json()
+    if not res.ok or "serviceErrorCode" in data:
+        raise Exception(data.get("message", "LinkedIn post failed"))
+    return data.get("id", "posted")
 
-            DAY_MAP[day].at(time_str).do(run_calendar_entry, entry=entry, dry_run=dry_run)
-            logger.info(f"Scheduled entry {entry['id']} every {day} at {time_str}")
+
+# ── Main job ──────────────────────────────────────────────────────────────────
+def run_post():
+    global topic_index
+    entry = TOPICS[topic_index % len(TOPICS)]
+    topic_index += 1
+    topic, voice = entry["topic"], entry["voice"]
+    log.info(f"Starting post — topic: '{topic}'")
+
+    try:
+        ig_data = generate_caption(topic, "instagram", voice)
+        li_data = generate_caption(topic, "linkedin", voice)
+        log.info("Captions generated")
+
+        image_url = get_image_url(ig_data["image_prompt"])
+        log.info(f"Image: {image_url}")
+
+        if INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_ACCOUNT_ID:
+            try:
+                mid = post_to_instagram(image_url, ig_data["caption"], ig_data["hashtags"])
+                log.info(f"✅ Instagram posted — {mid}")
+            except Exception as e:
+                log.error(f"❌ Instagram: {e}")
+
+        if LINKEDIN_ACCESS_TOKEN:
+            try:
+                pid = post_to_linkedin(li_data["caption"], li_data["hashtags"])
+                log.info(f"✅ LinkedIn posted — {pid}")
+            except Exception as e:
+                log.error(f"❌ LinkedIn: {e}")
+
+    except Exception as e:
+        log.error(f"❌ Post cycle failed: {e}")
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
-def main():
-    parser = argparse.ArgumentParser(description="AI Social Media Scheduler")
-    parser.add_argument("--dry-run", action="store_true", help="Print schedule without posting")
-    parser.add_argument("--run-now", type=int, metavar="ID", help="Immediately run entry with this ID")
-    args = parser.parse_args()
+# ── Entry point ───────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    log.info("🤖 CIAL.AI Scheduler starting...")
+    log.info(f"Post times (UTC): {', '.join(POST_TIMES)}")
+    log.info(f"Topics in rotation: {len(TOPICS)}")
 
-    calendar = json.loads(CALENDAR_FILE.read_text())
+    for t in POST_TIMES:
+        schedule.every().day.at(t).do(run_post)
+        log.info(f"Scheduled: {t} UTC")
 
-    if args.run_now:
-        matches = [e for e in calendar if e["id"] == args.run_now]
-        if not matches:
-            print(f"No calendar entry with id={args.run_now}")
-            return
-        run_calendar_entry(matches[0], dry_run=args.dry_run)
-        return
-
-    build_schedule(calendar, dry_run=args.dry_run)
-
-    if args.dry_run:
-        print("\n📅 Scheduled jobs:")
-        for job in schedule.jobs:
-            print(f"  {job}")
-        return
-
-    logger.info("🤖 Scheduler running. Press Ctrl+C to stop.")
+    log.info("Waiting for next scheduled post...")
     while True:
         schedule.run_pending()
         time.sleep(30)
-
-
-if __name__ == "__main__":
-    main()

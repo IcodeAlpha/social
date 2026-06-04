@@ -11,3 +11,10 @@ schedule>=1.2.1
 
 # Utilities
 python-dotenv>=1.0.0
+flask
+flask-cors
+google-genai
+requests
+tweepy
+schedule
+python-dotenv

@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__, static_folder="../", static_url_path="")
+app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), ".."), static_url_path="")
 CORS(app)
 
 GEMINI_API_KEY              = os.environ.get("GEMINI_API_KEY", "")
@@ -31,6 +31,7 @@ TWITTER_API_SECRET          = os.environ.get("TWITTER_API_SECRET", "")
 TWITTER_ACCESS_TOKEN        = os.environ.get("TWITTER_ACCESS_TOKEN", "")
 TWITTER_ACCESS_TOKEN_SECRET = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET", "")
 LINKEDIN_ACCESS_TOKEN        = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
+LINKEDIN_PERSON_URN          = os.environ.get("LINKEDIN_PERSON_URN", "")
 
 
 # ── Caption generation ────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ Respond ONLY with a valid JSON object — no markdown fences, no preamble:
 }}
 """.strip()
 
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-3.1-flash-lite", contents=prompt)
     raw = response.text.strip()
 
     if raw.startswith("```"):
@@ -164,14 +165,19 @@ def post_to_twitter(caption, hashtags):
 # ── LinkedIn posting ─────────────────────────────────────────────────────────────
 
 def get_linkedin_person_urn(access_token):
-    res = requests.get("https://api.linkedin.com/v2/userinfo", headers={
+    # Use env var if set
+    if LINKEDIN_PERSON_URN:
+        return LINKEDIN_PERSON_URN
+
+    # Fallback to API
+    res = requests.get("https://api.linkedin.com/v2/me", headers={
         "Authorization": f"Bearer {access_token}"
     })
     data = res.json()
-    sub = data.get("sub")
-    if not sub:
-        raise Exception(f"Could not get LinkedIn person URN: {data}")
-    return f"urn:li:person:{sub}"
+    person_id = data.get("id")
+    if not person_id:
+        raise Exception(f"Could not get LinkedIn URN: {data}")
+    return f"urn:li:person:{person_id}"
 
 
 def post_to_linkedin(caption, hashtags, access_token):
@@ -216,7 +222,9 @@ def post_to_linkedin(caption, hashtags, access_token):
 
 @app.route("/")
 def index():
-    return send_from_directory("../../", "index.html")
+    # index.html is in social_ai_bot/ (one level up from api/)
+    base = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(os.path.join(base, ".."), "index.html")
 
 
 @app.route("/callback")
@@ -332,6 +340,23 @@ def generate():
                     instagram_result = {"status": "posted", "media_id": media_id}
                 except Exception as e:
                     instagram_result = {"status": "error", "error": str(e)}
+
+        # LinkedIn auto-post
+        post_to_li = data.get("post_to_linkedin", False)
+        linkedin_result = {"status": "not_requested"}
+        if post_to_li and "linkedin" in posts:
+            if not LINKEDIN_ACCESS_TOKEN:
+                linkedin_result = {"status": "error", "error": "LINKEDIN_ACCESS_TOKEN not set"}
+            else:
+                try:
+                    post_id = post_to_linkedin(
+                        posts["linkedin"]["caption"],
+                        posts["linkedin"]["hashtags"],
+                        LINKEDIN_ACCESS_TOKEN,
+                    )
+                    linkedin_result = {"status": "posted", "post_id": post_id}
+                except Exception as e:
+                    linkedin_result = {"status": "error", "error": str(e)}
 
         # Twitter auto-post
         twitter_result = {"status": "not_requested"}

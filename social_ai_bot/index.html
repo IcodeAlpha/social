@@ -226,7 +226,7 @@ function clearAll() {
 }
 
 function getSelectedPlatforms() {
-  return [...document.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+  return [...document.querySelectorAll('.checkboxes input[type="checkbox"]:checked')].map(cb => cb.value);
 }
 
 async function generate() {
@@ -268,11 +268,21 @@ async function generate() {
     log('captions generated', 'success');
     log('requesting image from pollinations.ai...');
 
-    // Show Instagram post result
+    // Show post results
     if (data.instagram?.status === 'posted') {
       log(`✅ posted to instagram! media id: ${data.instagram.media_id}`, 'success');
     } else if (data.instagram?.status === 'error') {
       log(`instagram error: ${data.instagram.error}`, 'error');
+    }
+    if (data.twitter?.status === 'posted') {
+      log(`✅ posted to twitter! tweet id: ${data.twitter.tweet_id}`, 'success');
+    } else if (data.twitter?.status === 'error') {
+      log(`twitter error: ${data.twitter.error}`, 'error');
+    }
+    if (data.linkedin?.status === 'posted') {
+      log(`✅ posted to linkedin! post id: ${data.linkedin.post_id}`, 'success');
+    } else if (data.linkedin?.status === 'error') {
+      log(`linkedin error: ${data.linkedin.error}`, 'error');
     }
 
     renderResults(data);

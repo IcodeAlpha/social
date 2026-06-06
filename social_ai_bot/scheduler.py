@@ -36,7 +36,7 @@ POST_TIMES = ["08:00", "13:00", "18:00"]
 
 # Content calendar — rotates automatically
 TOPICS = [
-    {"topic": "How AI is transforming small businesses in Africa", "voice": "educational and inspiring"},
+    {"topic": "Why mental health matters for entrepreneurs", "voice": "empathetic and professional"},
     {"topic": "5 productivity hacks every developer should know", "voice": "casual and friendly"},
     {"topic": "The future of remote work and digital nomads", "voice": "thought-leadership, visionary"},
     {"topic": "Why mental health matters for entrepreneurs", "voice": "empathetic and professional"},

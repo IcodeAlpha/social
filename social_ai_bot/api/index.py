@@ -31,6 +31,8 @@ TWITTER_API_SECRET          = os.environ.get("TWITTER_API_SECRET", "")
 TWITTER_ACCESS_TOKEN        = os.environ.get("TWITTER_ACCESS_TOKEN", "")
 TWITTER_ACCESS_TOKEN_SECRET = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET", "")
 LINKEDIN_ACCESS_TOKEN        = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
+LINKEDIN_CLIENT_ID           = os.environ.get("LINKEDIN_CLIENT_ID", "")
+LINKEDIN_CLIENT_SECRET       = os.environ.get("LINKEDIN_CLIENT_SECRET", "")
 LINKEDIN_PERSON_URN          = os.environ.get("LINKEDIN_PERSON_URN", "")
 
 
@@ -184,25 +186,26 @@ def post_to_linkedin(caption, hashtags, access_token):
     person_urn = get_linkedin_person_urn(access_token)
     full_text = f"{caption}\n\n{' '.join(hashtags)}"[:3000]
 
+    # Use new LinkedIn Posts API (ugcPosts is deprecated)
     res = requests.post(
-        "https://api.linkedin.com/v2/ugcPosts",
+        "https://api.linkedin.com/rest/posts",
         headers={
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
+            "LinkedIn-Version": "202411",
             "X-Restli-Protocol-Version": "2.0.0",
         },
         json={
             "author": person_urn,
+            "commentary": full_text,
+            "visibility": "PUBLIC",
+            "distribution": {
+                "feedDistribution": "MAIN_FEED",
+                "targetEntities": [],
+                "thirdPartyDistributionChannels": [],
+            },
             "lifecycleState": "PUBLISHED",
-            "specificContent": {
-                "com.linkedin.ugc.ShareContent": {
-                    "shareCommentary": {"text": full_text},
-                    "shareMediaCategory": "NONE",
-                }
-            },
-            "visibility": {
-                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-            },
+            "isReshareDisabledByAuthor": False,
         },
     )
 
@@ -212,8 +215,8 @@ def post_to_linkedin(caption, hashtags, access_token):
     except Exception:
         raise Exception(f"LinkedIn raw error: {raw[:300]}")
 
-    if not res.ok or "serviceErrorCode" in data:
-        raise Exception(data.get("message", f"LinkedIn post failed: {raw[:200]}"))
+    if not res.ok:
+        raise Exception(f"LinkedIn post failed ({res.status_code}): {raw[:300]}")
 
     return data.get("id", "posted")
 
@@ -237,8 +240,8 @@ def linkedin_callback():
     if not code:
         return "<h2>No code received</h2>", 400
 
-    LINKEDIN_CLIENT_ID = os.environ.get("LINKEDIN_CLIENT_ID", "")
-    LINKEDIN_CLIENT_SECRET = os.environ.get("LINKEDIN_CLIENT_SECRET", "")
+    LINKEDIN_CLIENT_ID = os.environ.get("LINKEDIN_CLIENT_ID", "") or "77dwr1xmruw14d"
+    LINKEDIN_CLIENT_SECRET = os.environ.get("LINKEDIN_CLIENT_SECRET", "") or "REDACTED="
     REDIRECT_URI = request.base_url
 
     res = requests.post("https://www.linkedin.com/oauth/v2/accessToken", data={
@@ -386,6 +389,41 @@ def generate():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/linkedin-test")
+def linkedin_test():
+    token = LINKEDIN_ACCESS_TOKEN
+    urn = LINKEDIN_PERSON_URN
+    
+    # Test the token using new Posts API
+    res = requests.post(
+        "https://api.linkedin.com/rest/posts",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "LinkedIn-Version": "202411",
+            "X-Restli-Protocol-Version": "2.0.0",
+        },
+        json={
+            "author": urn,
+            "commentary": "Test post from CIAL.AI",
+            "visibility": "PUBLIC",
+            "distribution": {
+                "feedDistribution": "MAIN_FEED",
+                "targetEntities": [],
+                "thirdPartyDistributionChannels": [],
+            },
+            "lifecycleState": "PUBLISHED",
+            "isReshareDisabledByAuthor": False,
+        },
+    )
+    return jsonify({
+        "status": res.status_code,
+        "response": res.json(),
+        "token_preview": token[:20] + "...",
+        "urn": urn,
+    })
 
 
 @app.route("/api/health")

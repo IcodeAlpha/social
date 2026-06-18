@@ -36,18 +36,56 @@ POST_TIMES = ["08:00", "13:00", "18:00"]
 
 # Content calendar — rotates automatically
 TOPICS = [
-    {"topic": "Why mental health matters for entrepreneurs", "voice": "empathetic and professional"},
-    {"topic": "5 productivity hacks every developer should know", "voice": "casual and friendly"},
-    {"topic": "The future of remote work and digital nomads", "voice": "thought-leadership, visionary"},
-    {"topic": "Why mental health matters for entrepreneurs", "voice": "empathetic and professional"},
-    {"topic": "Building in public: lessons from shipping fast", "voice": "authentic and personal"},
-    {"topic": "Top AI tools that save you 10 hours a week", "voice": "bold and energetic"},
-    {"topic": "How to grow your personal brand on social media", "voice": "professional yet approachable"},
-    {"topic": "The rise of the creator economy in Africa", "voice": "educational and inspiring"},
-    {"topic": "Why every business needs an AI strategy in 2026", "voice": "thought-leadership, visionary"},
-    {"topic": "Morning routines of highly successful founders", "voice": "casual and friendly"},
-    {"topic": "How to turn your passion into a profitable product", "voice": "bold and energetic"},
-    {"topic": "The power of consistency in content creation", "voice": "professional yet approachable"},
+  {"topic":"The baker taught me why small improvements compound into greatness.","voice":"educational and storytelling"},
+  {"topic":"I spent years trying to stand out until I learned the power of being useful.","voice":"reflective and educational"},
+  {"topic":"The fisherman smiled when everyone else was panicking.","voice":"storytelling and insightful"},
+  {"topic":"I thought I needed a new opportunity. I actually needed a new mindset.","voice":"motivational and reflective"},
+  {"topic":"The village blacksmith knew more about success than most CEOs.","voice":"storytelling and educational"},
+  {"topic":"I asked why he woke up at 4 AM every day. His answer changed my habits.","voice":"inspiring and personal"},
+  {"topic":"The most successful person I know never talks about success.","voice":"thought-provoking and reflective"},
+  {"topic":"A cracked bucket taught me something perfect never could.","voice":"metaphorical and inspiring"},
+  {"topic":"The market vendor spotted an opportunity everyone else ignored.","voice":"storytelling and motivational"},
+  {"topic":"I thought luck was random until I watched how he prepared.","voice":"educational and inspiring"},
+  {"topic":"The day I stopped waiting for motivation, my life started moving.","voice":"motivational and practical"},
+  {"topic":"An empty notebook became the most valuable thing I owned.","voice":"reflective and storytelling"},
+  {"topic":"The old carpenter measured twice. His lesson went far beyond wood.","voice":"educational and insightful"},
+  {"topic":"I met a millionaire who envied a farmer.","voice":"philosophical and inspiring"},
+  {"topic":"The answer wasn't hidden in a book. It was hidden in a routine.","voice":"reflective and educational"},
+  {"topic":"A woman carrying water showed me what resilience really means.","voice":"storytelling and emotional"},
+  {"topic":"Everyone wanted the spotlight. He mastered the shadows.","voice":"dramatic and motivational"},
+  {"topic":"The train left without me, and that's when my journey began.","voice":"storytelling and inspiring"},
+  {"topic":"I thought I had missed my chance until I met a 70-year-old beginner.","voice":"inspiring and reflective"},
+  {"topic":"The strongest tree in the forest started as the weakest seed.","voice":"metaphorical and motivational"},
+  {"topic":"A single notebook page changed the direction of my life.","voice":"personal and inspiring"},
+  {"topic":"The baker taught me why small improvements compound into greatness.","voice":"educational and storytelling"},
+  {"topic":"I chased certainty and found fear. I chased action and found confidence.","voice":"motivational and reflective"},
+  {"topic":"The most important meeting of my life happened by accident.","voice":"storytelling and dramatic"},
+  {"topic":"A mechanic explained success using a rusty engine.","voice":"educational and relatable"},
+  {"topic":"The roadblock I hated became the shortcut I needed.","voice":"inspiring and reflective"},
+  {"topic":"He never won the race, but everyone remembered his journey.","voice":"storytelling and emotional"},
+  {"topic":"The old notebook in the attic held a lesson for every generation.","voice":"reflective and philosophical"},
+  {"topic":"I thought discipline felt like pressure. It actually felt like freedom.","voice":"educational and motivational"},
+  {"topic":"The abandoned building taught me what happens to neglected dreams.","voice":"metaphorical and thought-provoking"},
+  {"topic":"A stranger asked me one question I couldn't stop thinking about.","voice":"reflective and personal"},
+  {"topic":"The person with the least complained the least.","voice":"thought-provoking and inspiring"},
+  {"topic":"I found the courage I was looking for in the middle of failure.","voice":"authentic and motivational"},
+  {"topic":"The old farmer laughed when I asked for a shortcut.","voice":"storytelling and educational"},
+  {"topic":"Everyone saw a problem. She saw a business.","voice":"entrepreneurial and inspiring"},
+  {"topic":"The rain ruined our plans and revealed a better path.","voice":"storytelling and uplifting"},
+  {"topic":"I learned more from one honest failure than a hundred easy wins.","voice":"reflective and motivational"},
+  {"topic":"The man who owned nothing gave me everything I needed to hear.","voice":"emotional and inspiring"},
+  {"topic":"A bridge under construction taught me how growth really works.","voice":"metaphorical and educational"},
+  {"topic":"The best investment I ever made cost me nothing.","voice":"thought-provoking and inspiring"},
+  {"topic":"He kept showing up long after everyone else disappeared.","voice":"dramatic and motivational"},
+  {"topic":"The map was wrong, but the journey was exactly right.","voice":"storytelling and reflective"},
+  {"topic":"I spent years avoiding discomfort until I discovered its secret.","voice":"motivational and educational"},
+  {"topic":"The gardener never dug up the seed to check if it was growing.","voice":"metaphorical and inspiring"},
+  {"topic":"The lesson I needed arrived disguised as an inconvenience.","voice":"storytelling and reflective"},
+  {"topic":"A child building sandcastles taught me about ambition.","voice":"creative and inspiring"},
+  {"topic":"The quietest person in the room changed everyone's future.","voice":"storytelling and dramatic"},
+  {"topic":"I asked happiness where it lived. It pointed to gratitude.","voice":"philosophical and reflective"},
+  {"topic":"The storm didn't care about my plans, but it improved them anyway.","voice":"inspiring and metaphorical"},
+  {"topic":"Nobody noticed him for years. Then they called him an overnight success.","voice":"motivational and storytelling"}
 ]
 
 topic_index = 0
@@ -196,3 +234,13 @@ if __name__ == "__main__":
     while True:
         schedule.run_pending()
         time.sleep(30)
+
+
+
+
+
+
+
+
+
+

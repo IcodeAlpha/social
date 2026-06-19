@@ -36,7 +36,7 @@ POST_TIMES = ["08:00", "13:00", "18:00"]
 
 # Content calendar — rotates automatically
 TOPICS = [
-    {"topic":"The bug wasn't in the code. It was in our assumptions.","voice":"critical-thinking and storytelling"},
+    {"topic":"The science of compounding is bigger than money.","voice":"analytical and inspiring"},
     {"topic":"A software bug taught me more about leadership than any management book.","voice":"technical and insightful"},
     {"topic":"Why smart people keep making the same mistakes.","voice":"psychology and educational"},
     {"topic":"The hidden algorithm behind almost every successful career.","voice":"systems-thinking and educational"},
@@ -234,13 +234,6 @@ if __name__ == "__main__":
     while True:
         schedule.run_pending()
         time.sleep(30)
-
-
-
-
-
-
-
 
 
 

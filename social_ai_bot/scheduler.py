@@ -36,7 +36,7 @@ POST_TIMES = ["08:00", "13:00", "18:00"]
 
 # Content calendar — rotates automatically
 TOPICS = [
-  {"topic":"Emergence explains more of reality than intention.","voice":"complexity-science and philosophical"},
+  {"topic":"Success spreads through networks like a virus.","voice":"network-science and educational"},
   {"topic":"The most powerful systems are invisible because they no longer require decisions.","voice":"systems-thinking and philosophical"},
   {"topic":"Complexity grows gradually, collapse happens suddenly.","voice":"complexity-science and analytical"},
   {"topic":"Every optimization creates a new bottleneck somewhere else.","voice":"systems-thinking and educational"},

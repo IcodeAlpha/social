@@ -36,7 +36,7 @@ POST_TIMES = ["08:00", "13:00", "18:00"]
 
 # Content calendar — rotates automatically
 TOPICS = [
-{"topic":"People don't just search for truth—they search for satisfying explanations.","voice":"psychology and educational"},
+{"topic":"The search for hidden causes often reveals visible biases.","voice":"critical-thinking and educational"},
 {"topic":"People don't just search for truth—they search for satisfying explanations.","voice":"psychology and educational"},
 {"topic":"The mind fears randomness more than deception.","voice":"cognitive-science and analytical"},
 {"topic":"Certainty is emotionally comforting but intellectually expensive.","voice":"philosophical and educational"},
